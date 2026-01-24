@@ -17,8 +17,8 @@ A Discord bot built with Node.js and discord.js, designed to fetch and display h
 
 1.  **Clone the repository:**
     ```bash
-    git clone https://github.com/amanbotx2-fr/Hackney-Bot.git
-    cd Hackney-Bot
+    git clone https://github.com/amanbotx2-fr/Hacknex-Bot.git
+    cd Hacknex-Bot
     ```
 
 2.  **Install dependencies:**
