@@ -61,8 +61,8 @@ export function initCron(client) {
             console.log("✅ Normalized hackathons:", normalizedHackathons.length);
 
             if (normalizedHackathons.length === 0) {
-                console.log("⚠️ No hackathons found from any source");
-                // We don't return here, we proceed to "No new hackathons" check logic
+                console.log("⚠️ All sources failed this scan — skipping");
+                return;
             }
 
             let newCount = 0;

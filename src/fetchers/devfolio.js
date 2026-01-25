@@ -1,10 +1,29 @@
 import axios from 'axios';
 import * as cheerio from 'cheerio';
 
+async function doFetchDevfolio() {
+    return await axios.get('https://devfolio.co/hackathons', { timeout: 10000 });
+}
+
 export async function fetchDevfolioHackathons() {
     console.log("Fetching Devfolio hackathons...");
+    let data;
+
     try {
-        const { data } = await axios.get('https://devfolio.co/hackathons');
+        const response = await doFetchDevfolio();
+        data = response.data;
+    } catch (error) {
+        console.warn("⚠️ Devfolio fetch failed. Retrying (1/1)...");
+        try {
+            const response = await doFetchDevfolio();
+            data = response.data;
+        } catch (retryError) {
+            console.error("❌ Devfolio fetch failed after retry:", retryError.message);
+            return [];
+        }
+    }
+
+    try {
         const $ = cheerio.load(data);
 
         const hackathons = [];

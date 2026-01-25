@@ -10,10 +10,13 @@ import { initCron } from "./cron.js";
 dotenv.config();
 
 // Initialize Cron Jobs
-initCron(client);
+// moved to client.once(ready)
 
 client.once(Events.ClientReady, async (readyClient) => {
     console.log(`🚀 Hacknex Bot is online as ${readyClient.user.tag}`);
+
+    // Initialize Cron Jobs
+    initCron(client);
 
     // Migrate legacy .env channel if exists
     const legacyChannelId = process.env.DISCORD_CHANNEL_ID;
