@@ -1,54 +1,46 @@
 # Hacknex Bot
 
-A Discord bot built with Node.js and discord.js, designed to fetch and display hackathon information.
-    
-## Current Status
-- Bot foundation complete
-- Hourly cron scheduler added
-- Discord message automation working
+A Discord bot that tracks and posts new hackathon alerts from Devfolio, Unstop, and MLH to your server.
 
 ## Features
+- **Hourly Tracking**: Automatically scans for new hackathons every hour.
+- **Multi-Platform**: Supports Devfolio, Unstop, and MLH.
+- **Rich Alerts**: Posts detailed embeds with banners and direct links.
+- **Deduplication**: Ensures the same hackathon is never posted twice.
+- **Multi-Server**: Works across multiple Discord servers.
+- **Slash Commands**:
+  - `/latest`: View the most recent hackathons.
+  - `/setup`: Configure the alert channel for your server (Admin only).
 
-- **Startup Notification**: Sends a "Live" message to a configured channel on startup.
-- **Scheduler**: Hourly cron job that sends a status message to Discord (`node-cron`).
-- **Extensible Architecture**: Structured with a `src` folder and ready for future modules (data fetchers, commands).
+## Setup & Installation
 
-## Installation
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd hacknex-bot
+   ```
 
-1.  **Clone the repository:**
-    ```bash
-    git clone https://github.com/amanbotx2-fr/Hacknex-Bot.git
-    cd Hacknex-Bot
-    ```
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
 
-2.  **Install dependencies:**
-    ```bash
-    npm install
-    ```
+3. **Configure Environment**
+   - Copy the example config:
+     ```bash
+     cp .env.example .env
+     ```
+   - Edit `.env` and add your `DISCORD_TOKEN`.
 
-3.  **Configure Environment:**
-    Create a `.env` file in the root directory:
-    ```env
-    DISCORD_TOKEN=your_bot_token_here
-    DISCORD_CHANNEL_ID=your_channel_id_here
-    ```
+4. **Start the Bot**
+   ```bash
+   npm start
+   ```
 
 ## Usage
 
-Start the bot:
+- **Invite the bot** to your server.
+- Run **/setup** in the channel where you want hackathon alerts.
+- Check **/latest** at any time to see recent opportunities.
 
-```bash
-npm start
-```
-
-## Contributing
-
-1. Fork the project
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-## License
-
-Distributed under the MIT License. See `LICENSE` for more information.
+**Note**: JSON storage files (`seenHackathons.json` and `guildChannels.json`) are automatically created at runtime in `src/storage/`.
