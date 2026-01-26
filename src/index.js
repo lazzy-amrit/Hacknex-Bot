@@ -3,8 +3,8 @@ import { getLatestHackathons, getSeenHackathonsCount } from "./storage/dedup.js"
 import { setGuildChannel, getGuildChannel, getAllGuildChannels } from "./storage/guildConfig.js";
 
 import { fetchDevfolioHackathons } from "./fetchers/devfolio.js";
-import fetchUnstopHackathons } from "./fetchers/unstop.js";
-import fetchMLHHackathons } from "./fetchers/mlh.js";
+import fetchUnstopHackathons from "./fetchers/unstop.js";
+import fetchMLHHackathons from "./fetchers/mlh.js";
 import { getMonitorState } from "./cron.js";
 
 import dotenv from "dotenv";
