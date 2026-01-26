@@ -4,77 +4,70 @@ import { fetchDevfolioHackathons } from "./fetchers/devfolio.js";
 import fetchUnstopHackathons from "./fetchers/unstop.js";
 import fetchMLHHackathons from "./fetchers/mlh.js";
 import { isNewHackathon, markHackathonAsSeen } from "./storage/dedup.js";
+import { getAllGuildChannels } from "./storage/guildConfig.js";
 
-import { getAllGuilds } from "./storage/guildChannels.js";
-
-// State to track if we posted anything this hour
-// State to track if we posted anything this hour
-let postedInThisHour = false;
-let lastSummaryTime = Date.now(); // Track when we last sent a summary
+let lastSummaryTime = Date.now();
 
 export function initCron(client) {
-    // Runs every hour at minute 0
     cron.schedule("0 * * * *", async () => {
-        console.log("⏰ Hacknex hourly scan started");
-
-        // Reset state at start of hour (actually we want to reset AFTER sending the "No new" message?
-        // User rules: "At the END... If postedInThisHour === false... Send... Then reset".
-        // So we interpret "this hour" as "since the last check".
-        postedInThisHour = false;
+        console.log("⏰ Hourly scan started...");
 
         try {
-            const channelsMap = getAllGuilds();
-            const channelIds = Object.values(channelsMap);
+            const guildChannels = getAllGuildChannels();
+            const guildIds = Object.keys(guildChannels);
 
-            if (channelIds.length === 0) {
-                console.warn("Cron Warning: No guild channels saved.");
+            if (guildIds.length === 0) {
+                console.warn("⚠️ No configured guilds found. Skipping scan.");
                 return;
             }
 
-            // Fetch from all sources
-            console.log("Fetching Devfolio hackathons...");
-            const devfolioHackathons = await fetchDevfolioHackathons();
+            // 1. Fetch & Normalize
+            const [devfolio, unstop, mlh] = await Promise.all([
+                fetchDevfolioHackathons(),
+                fetchUnstopHackathons(),
+                fetchMLHHackathons()
+            ]);
 
-            console.log("Fetching Unstop hackathons...");
-            const unstopHackathons = await fetchUnstopHackathons();
+            const allHackathons = [...devfolio, ...unstop, ...mlh];
+            const normalizedHackathons = allHackathons.filter(h => h && h.id && h.title);
 
-            console.log("Fetching MLH hackathons...");
-            const mlhHackathons = await fetchMLHHackathons();
-
-            console.log(
-                `Fetched ${devfolioHackathons.length} from Devfolio, ${unstopHackathons.length} from Unstop, ${mlhHackathons.length} from MLH`
-            );
-
-            const allHackathons = [
-                ...devfolioHackathons,
-                ...unstopHackathons,
-                ...mlhHackathons
-            ];
-
-            const normalizedHackathons = allHackathons.map(h => ({
-                title: h.title || h.name || "Untitled Hackathon",
-                url: h.url || h.link,
-                platform: h.platform || "Unknown",
-                image: h.image
-            }));
-
-            console.log("✅ Normalized hackathons:", normalizedHackathons.length);
-
-            if (normalizedHackathons.length === 0) {
-                console.log("⚠️ All sources failed this scan — skipping");
-                return;
+            // 2. Identify NEW items globally
+            const newHackathons = [];
+            for (const h of normalizedHackathons) {
+                if (isNewHackathon(h.id)) {
+                    newHackathons.push(h);
+                }
             }
 
-            let newCount = 0;
+            if (newHackathons.length === 0) {
+                console.log("✅ No new hackathons found globally.");
+            } else {
+                console.log(`🔥 Found ${newHackathons.length} NEW hackathons! Sending alerts...`);
 
-            for (const hackathon of normalizedHackathons) {
-                if (isNewHackathon(hackathon.url)) {
-                    // Send to ALL channels
-                    for (const chId of channelIds) {
-                        try {
-                            const channel = await client.channels.fetch(chId);
-                            if (!channel) continue;
+                // 3. Mark them as seen NOW (store safely)
+                // We mark them seen so they aren't processed again in the next hour if this loop crashes.
+                // However, if we mark them seen before sending, and sending fails, we miss alerts.
+                // Best practice for simple bot: Send first, then mark.
+                // But since we have multiple guilds, one guild failure shouldn't stop marking for others.
+                // We will mark them at the end of the batch.
 
+                // 4. Distribute to Guilds
+                for (const guildId of guildIds) {
+                    const channelId = guildChannels[guildId];
+                    let sentCount = 0;
+
+                    try {
+                        const channel = await client.channels.fetch(channelId);
+                        if (!channel) continue;
+
+                        for (const hackathon of newHackathons) {
+                            // Rate Limit Check
+                            if (sentCount >= 5) {
+                                await channel.send("⚠️ More hackathons found. Use `/latest` to view all.");
+                                break;
+                            }
+
+                            // Send Message
                             if (hackathon.platform === "Unstop") {
                                 const embed = new EmbedBuilder()
                                     .setTitle("🏆 Hackathon Alert")
@@ -87,55 +80,41 @@ export function initCron(client) {
                                     .setFooter({ text: "Hacknex • Auto-updated hourly" })
                                     .setTimestamp();
 
-                                if (hackathon.image) {
-                                    embed.setImage(hackathon.image);
-                                }
-
+                                if (hackathon.image) embed.setImage(hackathon.image);
                                 await channel.send({ embeds: [embed] });
+
                             } else {
                                 const message =
                                     `🏆 Hackathon Alert\n` +
                                     `📌 ${hackathon.title}\n` +
                                     `🌐 Platform: ${hackathon.platform}\n` +
                                     `🔗 ${hackathon.url}`;
-
                                 await channel.send(message);
                             }
-                        } catch (err) {
-                            console.error(`Failed to send to channel ${chId}:`, err.message);
+
+                            sentCount++;
                         }
+                    } catch (err) {
+                        console.error(`❌ Failed to send to guild ${guildId}: ${err.message}`);
                     }
-
-                    markHackathonAsSeen(hackathon);
-                    newCount++;
                 }
+
+                // 5. Mark seen globally
+                for (const h of newHackathons) {
+                    markHackathonAsSeen(h);
+                }
+                console.log(`✅ Marked ${newHackathons.length} items as seen.`);
             }
 
-            if (newCount > 0) {
-                postedInThisHour = true;
-            }
-
-            // Check if 1 hour has passed since last summary
+            // 6. Summary Log
             const ONE_HOUR = 60 * 60 * 1000;
             if (Date.now() - lastSummaryTime >= ONE_HOUR) {
-                if (!postedInThisHour) {
-                    for (const chId of channelIds) {
-                        try {
-                            const channel = await client.channels.fetch(chId);
-                            if (channel) {
-                                await channel.send("✅ No new hackathons found in the last hour");
-                            }
-                        } catch (err) { console.error(err.message); }
-                    }
-                }
-
-                // Reset state after hour boundary
-                postedInThisHour = false;
+                console.log("✅ Hourly cycle complete. Bot is healthy.");
                 lastSummaryTime = Date.now();
             }
 
         } catch (error) {
-            console.error("Cron Error:", error);
+            console.error("❌ Critical Cron Error:", error);
         }
     });
 }

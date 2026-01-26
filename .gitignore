@@ -1,9 +1,9 @@
-node_modules/
+node_modules
 .env
-*.log
 .DS_Store
+
+# Ignore storage except example files
+src/storage/*.json
+!src/storage/*.example.json
 src/storage/seenHackathons.json
-src/storage/guildChannels.json
-test/
-temp_*.json
-.gemini/
+src/storage/guildConfig.json

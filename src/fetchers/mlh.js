@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { normalizeHackathon } from '../utils/normalizeHackathon.js';
 
 export default async function fetchMLHHackathons() {
     try {
@@ -7,10 +8,12 @@ export default async function fetchMLHHackathons() {
         const events = response.data || [];
         console.log(`Fetched ${events.length} hackathons from MLH.`);
 
-        return events.map(event => ({
+        return events.map(event => normalizeHackathon("MLH", {
             title: event.name,
             url: event.url,
-            platform: "MLH"
+            startsAt: event.start_date,
+            endsAt: event.end_date,
+            location: event.location
         }));
     } catch (error) {
         console.error("❌ MLH fetch failed:", error.message);

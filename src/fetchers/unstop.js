@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { normalizeHackathon } from '../utils/normalizeHackathon.js';
 
 export default async function fetchUnstopHackathons() {
     try {
@@ -22,13 +23,13 @@ export default async function fetchUnstopHackathons() {
 
         console.log("🔥 Unstop raw data:", hackathons.length);
 
-        return hackathons.map(hackathon => ({
+        return hackathons.map(hackathon => normalizeHackathon("Unstop", {
             title: hackathon.title,
-            url: hackathon.public_url
-                ? `https://unstop.com/${hackathon.public_url}`
-                : 'https://unstop.com/hackathons',
-            platform: "Unstop",
-            image: hackathon.banner_url || hackathon.cover_image || hackathon.logoUrl2
+            url: hackathon.public_url ? `https://unstop.com/${hackathon.public_url}` : 'https://unstop.com/hackathons',
+            image: hackathon.banner_url || hackathon.cover_image || hackathon.logoUrl2,
+            startsAt: hackathon.start_date,
+            endsAt: hackathon.end_date,
+            location: hackathon.location
         }));
 
     } catch (error) {
