@@ -5,7 +5,6 @@ import { setGuildChannel, getGuildChannel } from "./storage/guildConfig.js";
 import dotenv from "dotenv";
 import client from "./client.js";
 import { initCron } from "./cron.js";
-import { startServer } from "./server.js";
 
 // Load environment variables
 dotenv.config();
@@ -15,9 +14,6 @@ dotenv.config();
 
 client.once(Events.ClientReady, async (readyClient) => {
     console.log(`🚀 Hacknex Bot is online as ${readyClient.user.tag}`);
-
-    // Start API Server
-    startServer();
 
     // Initialize Cron Jobs
     initCron(client);
