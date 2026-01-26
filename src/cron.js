@@ -91,11 +91,8 @@ export async function runHackathonCycle(client, options = {}) {
                     if (!channel) continue;
 
                     for (const hackathon of newHackathons) {
-                        // Rate Limit Check
-                        if (sentCount >= 5) {
-                            await channel.send("⚠️ More hackathons found. Use `/latest` to view all.");
-                            break;
-                        }
+                        // Respect Discord Rate Limits: nice delay between messages
+                        if (sentCount > 0) await new Promise(resolve => setTimeout(resolve, 800));
 
                         // Send Message
                         if (hackathon.platform === "Unstop") {
