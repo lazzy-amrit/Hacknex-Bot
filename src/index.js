@@ -1,11 +1,11 @@
 import { Events, REST, Routes, InteractionType, EmbedBuilder, ChannelType, PermissionFlagsBits } from "discord.js";
-import { getLatestHackathons, getSeenHackathonsCount } from "./storage/dedup.js";
+import { getLatestHackathons, getSeenHackathonsCount, resetSeenHackathons } from "./storage/dedup.js";
 import { setGuildChannel, getGuildChannel, getAllGuildChannels } from "./storage/guildConfig.js";
 
 import { fetchDevfolioHackathons } from "./fetchers/devfolio.js";
 import fetchUnstopHackathons from "./fetchers/unstop.js";
 import fetchMLHHackathons from "./fetchers/mlh.js";
-import { getMonitorState } from "./cron.js";
+import { getMonitorState, runHackathonCycle } from "./cron.js";
 
 import dotenv from "dotenv";
 import client from "./client.js";
@@ -53,6 +53,45 @@ client.once(Events.ClientReady, async (readyClient) => {
                     description: 'Send a test hackathon alert to this channel (Admin Only)',
                 },
                 {
+                    name: 'fetchnow',
+                    description: 'Force a full fetch cycle immediately (Admin Only)',
+                },
+                {
+                    name: 'fetchplatform',
+                    description: 'Force fetch from a single platform (Admin Only)',
+                    options: [{
+                        name: 'platform',
+                        description: 'Platform to fetch',
+                        type: 3, // STRING
+                        required: true,
+                        choices: [
+                            { name: 'Devfolio', value: 'Devfolio' },
+                            { name: 'Unstop', value: 'Unstop' },
+                            { name: 'MLH', value: 'MLH' }
+                        ]
+                    }]
+                },
+                {
+                    name: 'resetseen',
+                    description: 'Clear the seen hackathons database (Admin Only)',
+                    options: [{
+                        name: 'confirm',
+                        description: 'Set to True to execute',
+                        type: 5, // BOOLEAN
+                        required: true
+                    }]
+                },
+                {
+                    name: 'resendlatest',
+                    description: 'Resend the last N hackathons to this channel (Admin Only)',
+                    options: [{
+                        name: 'count',
+                        description: 'Number of hackathons to resend',
+                        type: 4, // INTEGER
+                        required: true
+                    }]
+                },
+                {
                     name: 'setup',
                     description: 'Configure Hacknex to use a specific channel (Admins only)',
                     options: [{
@@ -64,6 +103,7 @@ client.once(Events.ClientReady, async (readyClient) => {
                         // Type 7 is CHANNEL.
                         type: 7,
                         required: true,
+                        choices: []
                     }]
                 }]
             },
@@ -242,6 +282,124 @@ client.on(Events.InteractionCreate, async interaction => {
             }
         } catch (err) {
             await interaction.reply({ content: "❌ Failed to send: " + err.message, ephemeral: true });
+        }
+    }
+
+    // Manual Controls
+    if (interaction.commandName === 'fetchnow') {
+        if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
+            await interaction.reply({ content: "❌ Administrator only", ephemeral: true });
+            return;
+        }
+        await interaction.deferReply({ ephemeral: true });
+
+        try {
+            const summary = await runHackathonCycle(client);
+
+            const embed = new EmbedBuilder()
+                .setTitle("🔄 Manual Fetch Complete")
+                .addFields(
+                    { name: "Total Fetched", value: `${summary.totalFetched}`, inline: true },
+                    { name: "New Found", value: `${summary.newFound}`, inline: true },
+                    { name: "Errors", value: summary.errors.length > 0 ? summary.errors.join('\n') : "None" }
+                )
+                .setColor(summary.errors.length > 0 ? 0xFFA500 : 0x00FF00);
+
+            await interaction.editReply({ embeds: [embed] });
+        } catch (error) {
+            await interaction.editReply("❌ Fetch failed: " + error.message);
+        }
+    }
+
+    if (interaction.commandName === 'fetchplatform') {
+        if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
+            await interaction.reply({ content: "❌ Administrator only", ephemeral: true });
+            return;
+        }
+
+        const platform = interaction.options.getString('platform');
+        await interaction.deferReply({ ephemeral: true });
+
+        try {
+            const summary = await runHackathonCycle(client, { platform });
+            const embed = new EmbedBuilder()
+                .setTitle(`🔄 Manual Fetch: ${platform}`)
+                .addFields(
+                    { name: "Total Fetched", value: `${summary.totalFetched}`, inline: true },
+                    { name: "New Found", value: `${summary.newFound}`, inline: true },
+                    { name: "Errors", value: summary.errors.length > 0 ? summary.errors.join('\n') : "None" }
+                )
+                .setColor(summary.errors.length > 0 ? 0xFFA500 : 0x00FF00);
+
+            await interaction.editReply({ embeds: [embed] });
+        } catch (error) {
+            await interaction.editReply("❌ Fetch failed: " + error.message);
+        }
+    }
+
+    if (interaction.commandName === 'resetseen') {
+        if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
+            await interaction.reply({ content: "❌ Administrator only", ephemeral: true });
+            return;
+        }
+        const confirm = interaction.options.getBoolean('confirm');
+        if (!confirm) {
+            await interaction.reply({ content: "❌ Action cancelled.", ephemeral: true });
+            return;
+        }
+
+        resetSeenHackathons();
+
+        const embed = new EmbedBuilder()
+            .setTitle("⚠️ Database Reset")
+            .setDescription("The seen hackathons database has been cleared.\n\n**Next fetch will treat ALL hackathons as new and may spam alerts.**")
+            .setColor(0xFF0000); // Red
+
+        await interaction.reply({ embeds: [embed], ephemeral: true });
+    }
+
+    if (interaction.commandName === 'resendlatest') {
+        if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
+            await interaction.reply({ content: "❌ Administrator only", ephemeral: true });
+            return;
+        }
+
+        const count = interaction.options.getInteger('count');
+        const latest = getLatestHackathons(count);
+
+        if (latest.length === 0) {
+            await interaction.reply({ content: "No stored hackathons found.", ephemeral: true });
+            return;
+        }
+
+        await interaction.reply({ content: `Resending last ${latest.length} hackathons...`, ephemeral: true });
+
+        // Send to current channel
+        const channel = interaction.channel;
+        if (!channel) return;
+
+        for (const hackathon of latest) {
+            if (hackathon.platform === "Unstop") {
+                const embed = new EmbedBuilder()
+                    .setTitle("🏆 Hackathon Alert (Resend)")
+                    .setDescription(`**${hackathon.title}**`)
+                    .addFields(
+                        { name: "Platform", value: hackathon.platform, inline: true },
+                        { name: "Link", value: `[Click Here](${hackathon.url})`, inline: true }
+                    )
+                    .setColor(0x0099ff)
+                    .setTimestamp();
+
+                if (hackathon.image) embed.setImage(hackathon.image);
+                await channel.send({ embeds: [embed] });
+            } else {
+                const message =
+                    `🏆 Hackathon Alert (Resend)\n` +
+                    `📌 ${hackathon.title}\n` +
+                    `🌐 Platform: ${hackathon.platform}\n` +
+                    `🔗 ${hackathon.url}`;
+                await channel.send(message);
+            }
         }
     }
 });

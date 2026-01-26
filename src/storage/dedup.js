@@ -58,3 +58,8 @@ export function getLatestHackathons(limit) {
 export function getSeenHackathonsCount() {
     return loadSeenHackathons().length;
 }
+
+export function resetSeenHackathons() {
+    saveSeenHackathons([]);
+    console.log("⚠️ Reset seen hackathons database.");
+}
