@@ -54,3 +54,7 @@ export function getLatestHackathons(limit) {
     // Return the last N items (reversed to show newest first)
     return valid.slice(-limit).reverse();
 }
+
+export function getSeenHackathonsCount() {
+    return loadSeenHackathons().length;
+}

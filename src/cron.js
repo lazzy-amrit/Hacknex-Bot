@@ -8,6 +8,18 @@ import { getAllGuildChannels } from "./storage/guildConfig.js";
 
 let lastSummaryTime = Date.now();
 
+// Monitoring state
+const monitorState = {
+    lastScanTime: "Never",
+    status: "Idle",
+    lastFetchCount: 0,
+    platforms: {}
+};
+
+export function getMonitorState() {
+    return monitorState;
+}
+
 export function initCron(client) {
     cron.schedule("0 * * * *", async () => {
         console.log("⏰ Hourly scan started...");
@@ -22,10 +34,13 @@ export function initCron(client) {
             }
 
             // 1. Fetch & Normalize
+            monitorState.status = "Fetching...";
+            monitorState.platforms = {};
+
             const [devfolio, unstop, mlh] = await Promise.all([
-                fetchDevfolioHackathons(),
-                fetchUnstopHackathons(),
-                fetchMLHHackathons()
+                fetchDevfolioHackathons().then(d => { monitorState.platforms.Devfolio = "✅ OK"; return d; }).catch(e => { monitorState.platforms.Devfolio = "❌ Error"; return []; }),
+                fetchUnstopHackathons().then(d => { monitorState.platforms.Unstop = "✅ OK"; return d; }).catch(e => { monitorState.platforms.Unstop = "❌ Error"; return []; }),
+                fetchMLHHackathons().then(d => { monitorState.platforms.MLH = "✅ OK"; return d; }).catch(e => { monitorState.platforms.MLH = "❌ Error"; return []; })
             ]);
 
             const allHackathons = [...devfolio, ...unstop, ...mlh];
@@ -113,8 +128,13 @@ export function initCron(client) {
                 lastSummaryTime = Date.now();
             }
 
+            monitorState.lastScanTime = new Date().toLocaleString();
+            monitorState.lastFetchCount = normalizedHackathons.length;
+            monitorState.status = "Online & Idle";
+
         } catch (error) {
             console.error("❌ Critical Cron Error:", error);
+            monitorState.status = "Critical Error: " + error.message;
         }
     });
 }
