@@ -1,99 +1,104 @@
 # 🏆 Hacknex Bot
 
-**A Data-Driven Discord Bot for Automated Hackathon Alerts**
+**The automated hackathon tracker for your Discord community.**
 
-Hacknex constantly scans top hackathon platforms (**Devfolio**, **Unstop**, **MLH**) and delivers real-time alerts directly to your Discord server. Designed for communities, colleges, and tech enthusiasts who never want to miss an opportunity.
+Hacknex solves the problem of missing out on great hackathons by automatically scanning major platforms (Devfolio, Unstop, MLH) and delivering organized alerts directly to your server. It’s built for students, developers, and tech communities who want to stay ahead without the manual work.
+
+---
+
+## 🚀 Add Hacknex to Your Server
+
+[**Click here to invite Hacknex**](https://discord.com/oauth2/authorize?client_id=1464258235669414145&permissions=2147568640&integration_type=0&scope=bot+applications.commands)
 
 ---
 
 ## ✨ Features
 
-- **Multi-Platform Scraping**: Aggregates data from Devfolio, Unstop, and MLH efficiently.
-- **Smart Deduplication**: Uses ID-based matching to ensure you never see the same hackathon twice.
-- **Auto-Formatting**: Delivers beautiful, clean Discord embeds with images and quick links.
-- **Zero Spam**: Only alerts when *new* hackathons are found.
-- **Robust Cron System**: Runs hourly scans with built-in network failure protection and rate limiting.
-- **Multi-Server Ready**: Fully supports infinite servers with per-guild configuration.
+- **No More FOMO**: Effectively tracks multiple hackathon platforms so you don't have to check them manually.
+- **Zero Spam**: Our smart deduplication ensures you only get notified once per event. No repeated alerts.
+- **Clean Format**: Alerts arrive as beautiful cards with all the info you need—title, platform, and registration link.
+- **Set & Forget**: Once configured, Hacknex runs quietly in the background, reliably delivering updates every hour.
+- **Privacy First**: We don’t track your members or read your chat. The bot strictly does one job: posting hackathons.
 
 ---
 
-## 🚀 Quick Setup
+## ⚡ Quick Setup
 
-### 1. Invite the Bot
-[**Click here to invite Hacknex to your server**](#) *(Add your OAuth URL here)*
+Getting started takes less than a minute.
 
-### 2. Configure Channel
-Once the bot joins, you must tell it where to post alerts. (Requires `Administrator` permission)
+1.  **Invite the bot** to your server using the link above.
+2.  **Run the setup command** in the text channel where you want alerts to appear:
+    ```
+    /setup channel:#alerts
+    ```
+3.  **Done!** Hacknex will now automatically post new hackathons to that channel.
 
-```
-/setup channel:#your-hackathon-alerts
-```
-
-### 3. Done!
-The bot will now automatically post new hackathons every hour. You don't need to do anything else.
+*Note: You need `Administrator` permissions on your server to run the setup command.*
 
 ---
 
 ## 🛠 Commands
 
-| Command | Permission | Description |
+| Command | Who | Description |
 | :--- | :--- | :--- |
-| `/setup` | **Admin** | Configure the channel for alerts. |
-| `/latest` | Everyone | Show the 5 most recently fetched hackathons instantly. |
+| `/setup` | **Admins** | Configures which channel the bot uses to post alerts. |
+| `/latest` | **Everyone** | Instantly shows the 5 most recent hackathons found. Good for checking what's active right now. |
+
+---
+
+## 🧠 How It Works
+
+Hacknex is designed to be efficient and reliable:
+1.  **Scan**: Every hour, it checks Devfolio, Unstop, and MLH for events.
+2.  **Normalize**: It standardizes the messy data into a clean, consistent format.
+3.  **Deduplicate**: It checks if an event has already been posted to avoid duplicates.
+4.  **Deliver**: New events are sent instantly to your configured channel.
 
 ---
 
 ## 📦 Tech Stack
 
-- **Runtime**: Node.js (v18+)
-- **Library**: discord.js (v14)
-- **Scraping**: Axios + Cheerio
-- **Task Scheduling**: node-cron
-- **Storage**: JSON-based persistent storage (No database required)
+Built with simplicity and performance in mind:
+
+-   **Runtime**: Node.js
+-   **Framework**: discord.js
+-   **Scraping**: Axios & Cheerio
+-   **Scheduling**: node-cron
+-   **Storage**: Local JSON (Lightweight & fast)
 
 ---
 
-## 🔧 Installation (Self-Host)
+## � Privacy & Safety
 
-If you want to run your own instance of Hacknex:
+We take privacy seriously.
 
-1.  **Clone the repository**
-    ```bash
-    git clone https://github.com/yourusername/hacknex-bot.git
-    cd hacknex-bot
-    ```
+-   **No Message Reading**: Hacknex does not (and cannot) read your private messages or server chat history.
+-   **No Personal Data**: We do not collect user data. We only store the Server ID and Channel ID needed to send messages.
+-   **Open Source**: This project is fully open-source, so you can inspect the code yourself to verify how it works.
 
-2.  **Install Dependencies**
-    ```bash
-    npm install
-    ```
+---
 
-3.  **Configure Environment**
-    Copy the example file and add your Discord Token.
-    ```bash
-    cp .env.example .env
-    ```
-    Edit `.env`:
-    ```
-    DISCORD_TOKEN=your_token_here
-    ```
+## 🔧 Self-Hosting
 
-4.  **Start the Bot**
-    ```bash
-    npm start
-    ```
+If you prefer to host your own instance:
+
+1.  Clone this repository.
+2.  Run `npm install` to install dependencies.
+3.  Create a `.env` file with your `DISCORD_TOKEN`.
+4.  Run `npm start` to bring it online.
 
 ---
 
 ## 🤝 Roadmap
 
-- [x] Multi-platform scraping
-- [x] ID-based deduplication
+- [x] Support for Devfolio, Unstop, and MLH
+- [x] Smart deduplication logic
 - [x] Multi-server support
-- [ ] Role ping configuration
-- [ ] Filtering by hackathon mode (Online/Offline)
+- [ ] Filter alerts by Online/Offline mode
+- [ ] Customizable role pings (e.g., @Hackers)
 
 ---
 
-### Disclaimer
-This bot scrapes public data. Use responsibly and respect the rate limits of source platforms.
+## 📜 Disclaimer
+
+Hacknex aggregates publicly available data from hackathon platforms for educational and community purposes. We respect platform rate limits and do not claim ownership of the event data.
