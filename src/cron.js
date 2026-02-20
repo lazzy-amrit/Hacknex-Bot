@@ -1,3 +1,4 @@
+let lastPostTime = 0;
 import cron from "node-cron";
 import { EmbedBuilder } from "discord.js";
 import { fetchDevfolioHackathons } from "./fetchers/devfolio.js";
@@ -108,7 +109,12 @@ export async function runHackathonCycle(client, options = {}) {
                                 .setTimestamp();
 
                             if (hackathon.image) embed.setImage(hackathon.image);
-                            await channel.send({ embeds: [embed] });
+                            const now = Date.now();
+
+                               if (now - lastPostTime >= 10 * 60 * 1000) {
+                               lastPostTime = now;
+                               await channel.send({ embeds: [embed] });
+                            }
 
                         } else {
                             const message =
